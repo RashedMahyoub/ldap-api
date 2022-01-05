@@ -1,0 +1,11 @@
+pyjwt==2.0.0
+flask-jwt-extended
+Flask-PyMongo
+exponent_server_sdk
+flasgger 0.9.5
+Flask
+flask-cors
+WTForms
+Flask-Mail
+Flask-Bcrypt
+

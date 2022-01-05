@@ -1,0 +1,831 @@
+swagger: "2.0"
+servers:
+  - url: http://localhost:5000/
+    description: Local
+
+info:
+  description: This is the API for Elearning website
+  version: "1.0.0"
+  title: E-learning API
+  contact:
+    email: apiElearning@gmail.com
+tags:
+  - name: admins
+    description: Secured Admin-only calls
+  - name: developers
+    description: Operations available to regular developers
+paths:
+  /courses/add/:
+    post:
+      tags:
+        - about courses
+      summary: add a course 
+      parameters:
+        - in: query
+          name: body
+          required: true
+          schema:
+            $ref: '#/components/schemas/course'
+      responses:
+        '200':
+          description: mongodb user id
+        '400':
+          description: bad input parameter
+  /courses/:
+    get:
+      tags:
+        - about courses
+      summary: get all course
+      responses:
+        '200':
+          description: search all courses 
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/courses'
+  /courses/get/{courseId}:
+    get:
+      tags:
+        - about courses
+      summary: get course by ID
+      parameters:
+        - in: path
+          name: courseId
+          schema:
+            type: string
+            format: uuid
+          required: true
+      responses:
+        '200':
+          description: search the course by ID 
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/courses'
+        '400':
+          description: course ID doesn't found
+
+  /students/beInstructor/{studentId}:
+    put:
+      tags:
+       - about students
+      summary: upgrade student  to be instructor 
+      parameters:
+        - in: path
+          name: studentId
+          schema:
+            type: string
+            format: uuid
+          required: true
+      responses:
+        '200':
+          description: upgrade student to instructor 
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/students'
+        '404':
+          description: stduent ID doesn't found
+           
+  /students/udpate/{studentId}:
+    put:
+      tags:
+       - about students
+      summary: update student information 
+      parameters:
+        - in: path
+          name: studentId
+          schema:
+            type: string
+            format: uuid
+          required: true
+        - in: query
+          name: body
+          required: true
+          schema:
+            $ref: '#/components/schemas/users'
+      responses:
+        '200':
+           description: success update
+        '400':
+           description: bad input parameter 
+  
+  /students/favoris/{studentID}/:
+    get:
+      tags:
+        - about students
+      summary: get  all student favorites courses
+      parameters:
+        - in: path
+          name: studentID
+          schema:
+            type: string
+            format: uuid
+          required: true
+      responses:
+        '200':
+          description: favorite courses 
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/courses'
+        '400':
+          description: bad input parameter   
+        '403':
+          description: studentID doesn't found 
+
+  /students/favoris/delete/{idstudent}/{idfavoris}:
+    delete:
+      tags:
+        - about students
+      summary: remove idfavoris from list favorite of to the student
+      parameters:
+        - in: path
+          name: idstudent
+          schema:
+            type: string
+            format: uuid
+          required: true
+        - in: path
+          name: idfavoris
+          required: true
+          schema:
+            type: string
+            format : uuid
+      responses:
+        '200':
+          description: succes
+        '400':
+           description: bad input parameter   
+        '403':
+          description: idstudent doesn't found  
+                  
+  /students/favoris/{studentID}/{idfavoris}:
+    put:
+      tags:
+        - about students
+      summary: add forvite course to the student studentID
+      parameters:
+        - in: path
+          name: studentID
+          schema:
+            type: string
+            format: uuid
+          required: true
+        - in: path
+          name: idfavoris
+          required: true
+          schema:
+            type: string
+            format : uuid
+      responses:
+        '200':
+          description: succes
+        '400':
+           description: bad input parameter   
+        '403':
+          description: studentID doesn't found 
+  
+  /instructors/{idInstructor}/{state}:
+    put:
+      tags:
+        - about instructors
+      summary: udpate state by admin, state =[wait, activated, suspended ]
+      parameters:
+        - in: path
+          name: idInstructor
+          schema:
+            type: string
+          required: true
+        - in: path
+          name: state
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: succes
+          
+        '403':
+          description: Instructor  doesn't found
+
+  /instructors/courses/{idInstructor}:
+    get:
+      tags:
+        - about instructors
+      summary: searches courses for a given instructor
+      parameters:
+        - in: path
+          name: idInstructor
+          description: pass the instructor id for looking up course
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/courses'
+        '403':
+          description: Instructor  doesn't found
+
+  /instructors/getALl/:
+    get:
+      tags:
+        - about instructors
+      summary: searches all instructors
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/students'
+
+  /projects/get/{idproject}:
+    get:
+      tags:
+        - about projects
+      summary: searches project by ID
+      parameters:
+        - in: path
+          name: idproject
+          description: pass the id of the project for looking up project
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: object
+                $ref: '#/components/schemas/projects'
+        '400':
+          description: bad input parameter
+          
+  /projects/state/:
+    get:
+      tags:
+        - about projects
+      summary: searches project by state
+      parameters:
+        - in: query
+          name: state
+          description: pass the state of the project for looking up projects
+          required: true
+          schema:
+            type: string
+  
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: object
+                $ref: '#/components/schemas/projects'
+        '400':
+          description: bad input parameter
+  
+  /projects/update/{idproject}:
+    get:
+      tags:
+        - about projects
+      summary: update project by ID
+      parameters:
+        - in: path
+          name: idproject
+          description: pass the id of the project to update
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: succes update
+          content:
+            application/json:
+              schema:
+                type: object
+                $ref: '#/components/schemas/projects'
+        '400':
+          description: bad input parameter
+  /projects/add/:
+    post:
+      tags:
+        - about projects
+      summary: add project by a user [OID of the user in the request as 'user']
+      parameters:
+        - in: query
+          name: body
+          required: true
+          schema:
+            $ref: '#/components/schemas/projects'
+      responses:
+        '200':
+          description: success add
+        '400':
+          description: bad input parameter
+          
+  /projects/filter/:
+    get:
+      tags:
+        - about projects
+      summary: serach projects based on the user's filter
+      parameters:
+        - in: query
+          name: body
+          required: true
+          schema:
+            $ref: '#/components/schemas/filter'
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/projects'
+        '400':
+          description: bad input parameter
+          
+            
+  /projects/deleteAll/{idUser}/:
+    delete:
+      tags:
+        - about projects
+      summary: delete all project of the idUser
+      parameters:
+        - in: path
+          name: idUser
+          description: pass the user id to delete All projects
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: success
+        '500':
+          description: delete problem
+        '404':
+          description: user not foun
+           
+  /projects/deleteOne/{idProject}/:
+    delete:
+      tags:
+        - about projects
+      summary: delete the project idProject
+      parameters:
+        - in: path
+          name: idProject
+          description: pass the project Id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: success
+        '500':
+          description: delete problem
+        '404':
+          description: project not foun
+          
+  /projects/proposals/remove/{idProvider}{idProject}/:
+    put:
+      tags:
+        - about projects
+      summary: delete the project idProject
+      parameters:
+        - in: path
+          name: idProject
+          description: pass the project Id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: idProvider
+          description: pass the provider Id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: success
+        '500':
+          description: delete problem
+        '404':
+          description: project or provider not foun 
+                 
+  /projects/proposals/add/{projectId}:
+    put:
+      tags:
+        - about projects
+      summary: add proposal to project projectId
+      parameters:
+        - in: path
+          name: projectId
+          description: pass the peoject id to add proposal
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: body
+          required: true
+          schema:
+            type: object
+            required:
+              - provider
+              - description
+              - cost
+            properties:
+              provider:
+                type: string
+                description: id of the provider
+                format: uuid
+              description: 
+                description: proposal descirpion
+                type: string
+                format: date
+              cost:
+                type: number
+                description: cost of the proposal
+      responses:
+        '200':
+          description: success add
+          content:
+            application/json:
+              schema:
+                type: string
+        '400':
+          description: bad input parameter
+        '404':
+          description: project id not found
+        '500': 
+          description: update problem
+          
+  /projects/proposals/{projectId}:
+    get:
+      tags:
+        - about projects
+      summary: search proposals of the project projectID
+      parameters:
+        - in: path
+          name: projectId
+          description: pass id the project
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/proposal'
+        '400':
+          description: bad input parameter
+        '500': 
+          description: search problem 
+          
+  /projects/proposals/get/{projectId}/{providerId}:
+    get:
+      tags:
+        - about projects
+      summary: search proposal of the project projectID proposed by providerId
+      parameters:
+        - in: path
+          name: projectId
+          description: pass id  project
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: providerId
+          description: pass id the the provider
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/proposal'
+        '400':
+          description: bad input parameter
+        '500': 
+          description: search problem 
+          
+  /projects/state/{projectId}/{state}:
+    put:
+      tags:
+        - about projects
+      summary: update the  state of the project projectID 
+      parameters:
+        - in: path
+          name: projectId
+          description: pass id the project
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: state
+          description: pass  the new state
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: success  update
+        '400':
+          description: bad input parameter
+        '500': 
+          description: search problem
+          
+  /projects/progress/{projectId}/{state}:
+    put:
+      tags:
+        - about projects
+      summary: update the  progress state of the project projectID 
+      parameters:
+        - in: path
+          name: projectId
+          description: pass id the project
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: state
+          description: pass  the new state
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: success  update
+        '400':
+          description: bad input parameter
+        '500': 
+          description: server problem
+          
+  /projects/proposals/{projectId}/{providerId}:
+    put:
+      tags:
+        - about projects
+      summary: add the winner of the project
+      parameters:
+        - in: path
+          name: projectId
+          description: pass id the project
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: path
+          name: providerId
+          description: pass  the provider Id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: success  update
+        '400':
+          description: bad input parameter
+        '500': 
+          description: search problem 
+          
+  /packages/add/:
+    post:
+      tags:
+        - about package
+      summary: add new package 
+      parameters:
+        - in: query
+          name: body
+          required: true
+          schema:
+            $ref: '#/components/schemas/packages'
+      responses:
+        '200':
+          description: success add
+        '400':
+          description: bad input parameter
+  /packages/:
+    get:
+      tags:
+        - about package
+      summary: get all packages 
+      responses:
+        '200':
+          description: search results matching criteria
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/packages'
+        '400':
+          description: bad input parameter
+          
+  /packages/deleteAll/:
+    delete:
+      tags:
+        - about package
+      summary: delete all packages 
+      responses:
+        '200':
+          description: success
+         
+        '500':
+          description: delete problem
+          
+  /packages/get/{idpackage}:
+    get:
+      tags:
+        - about package
+      summary: search package by id
+      parameters:
+        - in: path
+          name: idpackage
+          description: pass id the project
+          required: true
+          schema:
+           type: string
+           format: uuid
+      responses:
+        '200':
+          description: success
+         
+        '500':
+          description: update problem 
+                  
+                    
+components:
+  schemas:
+    students:
+      description: student with a basic account which can subscribe on a course
+      type: object
+      required:
+        - uuid
+        - name
+        - email
+        - country
+        - city
+        - courses
+        - created
+      properties:
+        uuid:
+          description: UUID of the student 
+          type: string
+          format: uuid
+          example: 54ee07dbc3f29cc751a23829
+        name:
+          description: Name of the student
+          type: string
+          example: Malek
+        email:
+          description: email
+          type: string
+        country:
+          description: country of the student
+          type: string
+          example: Arabie Saoudite
+        city:
+          description: city of the student
+          type: string
+          example: Jedda
+        password:
+          description: password of the user. Must be 8 caracters
+          type: string
+          example: test125555!
+        Isinstructor:
+          description: indicates if the student is also an instructor
+          type: string
+          enum: [true, false]
+        courses:
+          description: courses where student is subscribe
+          type: array
+          items:
+            $ref: '#/components/schemas/courses'
+        favoris:
+          description:  course favoris for the student
+          type: array
+          items:
+           description: uuid of course
+           type: string
+           format: uuid
+    
+    courses:
+      description: course given by an instructor
+      type: object
+      required:
+        - uuid
+        - instructorID
+        - title
+        - description
+        - price
+        - requirements
+        - video
+        - state
+        - chapters
+        - category
+        - createdAt
+      properties:
+        oid:
+          description: UUID of the course 
+          type: string
+          format: uuid
+          example: 54ee07dbc3f29cc751a23829
+        instructorID:
+          description: UUID of the instructor given the course 
+          type: string
+          format: uuid
+        chapters:
+          description: array of chapters
+          type: array
+          items:
+            $ref: '#/components/schemas/chapters'
+        createdAt:
+          description: data creation of the room
+          type: string
+          format: date
+          
+    chapters:
+      description: chapter of a course
+      type: object
+      required:
+        - title
+        - description
+        - content
+      properties:
+        title:
+          description: title of the chapter
+          type: string
+          example: inroduction to Python
+        description:
+          description: desciption of the chapter
+          type: string
+          example: in this chapter ....
+        lessions:
+          description: array of lession
+          type: array
+          items:
+            $ref: '#/components/schemas/lessions'
+
+    lessions:
+      description: lession of a chapter
+      type: object
+      required:
+        - title
+        - file
+        - fileType
+      properties:
+        title:
+          description: title of the lession
+          type: string
+          example: inroduction to Python
+        file:
+          description: URL of file attached to lession
+          type: string
+        fileType:
+          description: type of the file; can be video of pdf
+          type: string
+          enum: [video, pdf]
+
+    
+          
+    

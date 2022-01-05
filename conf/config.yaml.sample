@@ -1,0 +1,4 @@
+# Core config
+app_name: elearning
+redis: redis://localhost:6379/0
+debug: true
