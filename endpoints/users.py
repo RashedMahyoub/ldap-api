@@ -119,10 +119,20 @@ def upgradeUser(userId):
 @usersapi.route('/users/<Id>', methods=['PUT'])
 @jwt_required(refresh=True)
 def updateUser(Id):
-
+    
     if not request.json:
         abort(400)
-  
+    if ObjectId.is_valid(Id) == False:
+        return id_inalid(Id)
+      
+    user = users.find_one({'_id': ObjectId(Id)})
+    
+    # user not exist in dataBase
+    if user == None:
+        resp = jsonify({"message": "The user not exist in database"})
+        resp.status_code = 404
+        return resp
+
     if 'name' in request.json and isinstance(request.json['name'], str) == False:
         abort(400)
     if 'city' in request.json and isinstance(request.json['city'], str) == False:
