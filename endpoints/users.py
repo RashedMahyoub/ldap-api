@@ -580,7 +580,7 @@ def send_email(to, subject, template):
         subject,
         recipients=[to],
         html=template,
-        sender='zakibrahmi@gmail.com'
+        sender=app.config['MAIL_USERNAME']
     )
     mail.send(msg)
     
