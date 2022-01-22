@@ -20,6 +20,7 @@ from . import *
 from endpoints.utilsFunction import *
 from flask_jwt_extended import set_access_cookies
 from flask_jwt_extended import unset_jwt_cookies
+from flask_cors import CORS, cross_origin
 
 usersapi = Blueprint(name="usersapi", import_name=__name__)
 
@@ -134,8 +135,6 @@ def updateUser(Id):
     if 'counrty' in request.json and isinstance(request.json['counrty'], str) == False:
         abort(400)
     if isinstance(request.json['email'], str) == False:
-        abort(400)
-    if 'mobile' in request.json and isinstance(request.json['mobile'], str) == False:
         abort(400)
     
     user = request.get_json()
@@ -389,6 +388,7 @@ def getAllOrders(iduser):
 # https://flask-jwt-extended.readthedocs.io/en/stable/refreshing_tokens/
 
 @usersapi.route('/users/logIn/', methods=['POST'])
+@cross_origin(supports_credentials=True)
 def login():
 
     if not request.json:
