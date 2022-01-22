@@ -72,8 +72,6 @@ def createUser():
         abort(400)
     if isinstance(request.json['email'], str) == False:
         abort(400)
-    if 'mobile' in request.json and isinstance(request.json['mobile'], str) == False:
-        abort(400)
     
     datauser = request.get_json()
     user = users.find_one({'email': datauser['email']})
@@ -118,16 +116,24 @@ def upgradeUser(userId):
 
     return jsonify(json.loads(json_util.dumps(users.find_one({'_id': ObjectId(userId)}))))
 
-# update  user account/password
+# update  user information
 @usersapi.route('/users/<Id>', methods=['PUT'])
 @jwt_required(refresh=True)
 def updateUser(Id):
-
+    
     if not request.json:
         abort(400)
-  
-    if 'password' not in request.json  and 'email' not in request.json:
-        abort(400) 
+    if ObjectId.is_valid(Id) == False:
+        return id_inalid(Id)
+      
+    user = users.find_one({'_id': ObjectId(Id)})
+    
+    # user not exist in dataBase
+    if user == None:
+        resp = jsonify({"message": "The user not exist in database"})
+        resp.status_code = 404
+        return resp
+
     if 'name' in request.json and isinstance(request.json['name'], str) == False:
         abort(400)
     if 'city' in request.json and isinstance(request.json['city'], str) == False:
@@ -138,8 +144,7 @@ def updateUser(Id):
         abort(400)
     
     user = request.get_json()
-    user['password'] = generate_password_hash(user['password'])
-    
+       
     try:
         res = users.update_one({'_id': ObjectId(Id)}, {'$set': user})
     except Exception:
@@ -147,6 +152,52 @@ def updateUser(Id):
     
     return jsonify(json.loads(json_util.dumps(users.find_one({'_id': ObjectId(Id)}))))
 
+# update user email/password
+@usersapi.route('/users/emailPassword/<Id>', methods=['PUT'])
+@jwt_required(refresh=True)
+def updateEmailPasswordUser(Id):
+
+    if not request.json:
+        abort(400)
+    
+    if ObjectId.is_valid(Id) == False:
+        return id_inalid(Id)
+    data = request.get_json()
+    if "newPassword" not in data and "newEmail" not in data:
+        abort(400)
+    #check password
+    user = users.find_one({'_id': ObjectId(Id)})
+    response= jsonify({})
+    # user not exist in dataBase
+    if user == None:
+        resp = jsonify({"message": "The user not exist in database"})
+        resp.status_code = 404
+        return resp
+     
+    if check_password_hash(user['password'], data['password']):
+        
+        if 'newEmail' in data:      
+            try:
+                res = users.update_one({'_id': ObjectId(Id)}, {'$set': {'email': data['newEmail']}})
+            except Exception:
+                abort(500)            
+        else:            
+            Newpassword = generate_password_hash(data['newPassword'])
+            try:
+                res = users.update_one({'_id': ObjectId(Id)}, {'$set': {'password': Newpassword}})
+            except Exception:
+                abort(500)
+            
+        access_token = create_access_token(identity= str(user['_id']), fresh=True)
+        user2 = users.find_one({'_id': ObjectId(Id)})
+        response = jsonify({"msg": "update successful", 'data': json.loads(json_util.dumps(user2))})
+        set_access_cookies(response, access_token)
+        return  response
+
+    else:
+        resp = jsonify({'message' : 'Bad Request - invalid password'})
+        resp.status_code = 400
+        return resp
 #user subscription 
 @usersapi.route('/users/subscription/<iduser>/<idcourse>', methods=['GET'])
 @jwt_required()
