@@ -118,7 +118,7 @@ def upgradeUser(userId):
 
 # update  user information
 @usersapi.route('/users/<Id>', methods=['PUT'])
-@jwt_required(refresh=True)
+# @jwt_required(refresh=True)
 def updateUser(Id):
     
     if not request.json:
@@ -154,7 +154,7 @@ def updateUser(Id):
 
 # update user email/password
 @usersapi.route('/users/emailPassword/<Id>', methods=['PUT'])
-@jwt_required(refresh=True)
+# @jwt_required(refresh=True)
 def updateEmailPasswordUser(Id):
 
     if not request.json:
@@ -200,7 +200,7 @@ def updateEmailPasswordUser(Id):
         return resp
 #user subscription 
 @usersapi.route('/users/subscription/<iduser>/<idcourse>', methods=['GET'])
-@jwt_required()
+# @jwt_required()
 def subscriptionCourse(iduser, idcourse):
     
     if ObjectId.is_valid(iduser) == False:
