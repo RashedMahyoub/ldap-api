@@ -1,7 +1,9 @@
 from math import trunc
 from flask import request, make_response, abort, session
+from itsdangerous import URLSafeTimedSerializer
+from flask_mail import Message
 
-from flask import Flask, Blueprint, jsonify
+from flask import Flask, Blueprint, jsonify, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_pymongo import PyMongo
 import uuid
@@ -20,9 +22,25 @@ from . import *
 from endpoints.utilsFunction import *
 from flask_jwt_extended import set_access_cookies
 from flask_jwt_extended import unset_jwt_cookies
+<<<<<<< HEAD
 from flask_cors import CORS, cross_origin
+=======
+from flask_mail import Mail, Message
+>>>>>>> 2d6fc1a8f525faf8705d5909c7b9de7855fc97fa
 
 usersapi = Blueprint(name="usersapi", import_name=__name__)
+
+#email
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 465
+app.config['MAIL_USE_TLS'] = False
+app.config['MAIL_USE_SSL'] = True
+app.config['MAIL_USERNAME'] = 'zakibrahmi@gmail.com'
+app.config['MAIL_PASSWORD'] = 'sabrina!!__))123456789'
+app.config['SECRET_KEY'] ='01428!4f2af45d3a4e161a7dd2d17fdae47f'
+app.config['SECURITY_PASSWORD_SALT'] ='01428!4f2a4e161a7dd2d17fg45!e47f'
+mail = Mail(app)
+mail.init_app(app)
 
 # traitement erreur
 @usersapi.errorhandler(400)
@@ -33,7 +51,6 @@ def create_failed(error):
 def internalServer(error):
     return make_response(jsonify({'error': 'Internal Server Error'}), 500)
 
-
 @usersapi.errorhandler(403)
 def user_notfound(id):
     message = {
@@ -42,7 +59,6 @@ def user_notfound(id):
     }
     resp = jsonify(message)
     return resp
-
 
 @usersapi.errorhandler(404)
 def not_found(error=None):
@@ -74,23 +90,53 @@ def createUser():
         abort(400)
     
     datauser = request.get_json()
+    
     user = users.find_one({'email': datauser['email']})
+
     if user:
         resp = jsonify({"message": "An account already registered by this Email"})
         resp.status_code = 403
         return resp
-    
+
     datauser['created'] = time.strftime('%d/%m/%y', time.localtime())
     datauser['password'] = generate_password_hash(datauser['password'])
+    datauser['IsConfirmed'] = False
+    
     try:
         res = users.insert_one(datauser)
     except Exception:
         return internalServer()
+    
+    # Send confirmation Email    
+    
+    token = generate_confirmation_token(datauser['email'])
+    
+    url = url_for('usersapi.confirm_email', token=token, _external=True)
+    text = 'Your link is {}'.format(url)
+    subject = "Please confirm your email"
+    send_email(datauser['email'], subject, text)
 
-    u = users.find_one({'_id': ObjectId(res.inserted_id)}, {'password': 0} )
+    u = users.find_one({'_id': ObjectId(res.inserted_id)})
     resp = jsonify(json.loads(json_util.dumps(u)))
+ 
     resp.status_code = 200
     return resp
+
+# Confiramtion Email
+@usersapi.route('/confirm_email/<token>')
+def confirm_email(token):
+    
+    try:
+        email = confirm_token(token)
+    except:
+        return '<h1>The token is expired!</h1>'
+   
+    try:
+        res = users.update_one({'email': email}, {'$set': {'IsConfirmed': True}})
+    except Exception:
+        abort(500)
+    
+    return jsonify(json.loads(json_util.dumps(users.find_one({'email': email}))))
 
 # Upgrade user to Instructor
 @usersapi.route('/users/beInstructor/<userId>', methods=['PUT'])
@@ -118,14 +164,14 @@ def upgradeUser(userId):
 
 # update  user information
 @usersapi.route('/users/<Id>', methods=['PUT'])
-# @jwt_required(refresh=True)
+@jwt_required()
 def updateUser(Id):
-    
+
     if not request.json:
         abort(400)
     if ObjectId.is_valid(Id) == False:
-        return id_inalid(Id)
-      
+        return id_inalid(Id)   
+   
     user = users.find_one({'_id': ObjectId(Id)})
     
     # user not exist in dataBase
@@ -133,7 +179,7 @@ def updateUser(Id):
         resp = jsonify({"message": "The user not exist in database"})
         resp.status_code = 404
         return resp
-
+  
     if 'name' in request.json and isinstance(request.json['name'], str) == False:
         abort(400)
     if 'city' in request.json and isinstance(request.json['city'], str) == False:
@@ -154,7 +200,7 @@ def updateUser(Id):
 
 # update user email/password
 @usersapi.route('/users/emailPassword/<Id>', methods=['PUT'])
-# @jwt_required(refresh=True)
+@jwt_required()
 def updateEmailPasswordUser(Id):
 
     if not request.json:
@@ -180,7 +226,18 @@ def updateEmailPasswordUser(Id):
             try:
                 res = users.update_one({'_id': ObjectId(Id)}, {'$set': {'email': data['newEmail']}})
             except Exception:
-                abort(500)            
+                abort(500)
+            # Send confirmation Email    
+    
+            token = generate_confirmation_token(data['newEmail'])    
+            url = url_for('usersapi.confirm_email', token=token, _external=True)
+            text = 'Your link is {}'.format(url)
+            subject = "Please confirm your email"
+            send_email(data['newEmail'], subject, text)   
+            try:
+              res = users.update_one({'_id': ObjectId(Id)}, {'$set': {'IsConfirmed': False}})
+            except Exception:
+                abort(500)    
         else:            
             Newpassword = generate_password_hash(data['newPassword'])
             try:
@@ -188,10 +245,11 @@ def updateEmailPasswordUser(Id):
             except Exception:
                 abort(500)
             
-        access_token = create_access_token(identity= str(user['_id']), fresh=True)
+        response = jsonify({"msg": "Logout successful"})
+        unset_jwt_cookies(response)
         user2 = users.find_one({'_id': ObjectId(Id)})
         response = jsonify({"msg": "update successful", 'data': json.loads(json_util.dumps(user2))})
-        set_access_cookies(response, access_token)
+       
         return  response
 
     else:
@@ -459,6 +517,7 @@ def login():
     if check_password_hash(user['password'], data['password']):
       
         access_token = create_access_token(identity= str(user['_id']), fresh=True)
+        
         response = jsonify({"msg": "login successful", 'data': json.loads(json_util.dumps(user))})
         set_access_cookies(response, access_token)
 
@@ -506,5 +565,31 @@ def refresh_expiring_jwts(response):
         # Case where there is not a valid JWT. Just return the original respone
         return response
   
+  
+def generate_confirmation_token(email):
+    serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+    return serializer.dumps(email, salt=app.config['SECURITY_PASSWORD_SALT'])
+
+def confirm_token(token, expiration=3600):
+    serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+    try:
+        email = serializer.loads(
+            token,
+            salt=app.config['SECURITY_PASSWORD_SALT'],
+            max_age=expiration
+        )
+    except:
+        return False
+    return email
+
+def send_email(to, subject, template):
+    msg = Message(
+        subject,
+        recipients=[to],
+        html=template,
+        sender=app.config['MAIL_USERNAME'] 
+    )
+    mail.send(msg)
+    
 if __name__ == '__main__':
     app.run(debug=True)
