@@ -22,11 +22,7 @@ from . import *
 from endpoints.utilsFunction import *
 from flask_jwt_extended import set_access_cookies
 from flask_jwt_extended import unset_jwt_cookies
-<<<<<<< HEAD
-from flask_cors import CORS, cross_origin
-=======
 from flask_mail import Mail, Message
->>>>>>> 2d6fc1a8f525faf8705d5909c7b9de7855fc97fa
 
 usersapi = Blueprint(name="usersapi", import_name=__name__)
 
@@ -497,7 +493,6 @@ def getAllOrders(iduser):
 # https://flask-jwt-extended.readthedocs.io/en/stable/refreshing_tokens/
 
 @usersapi.route('/users/logIn/', methods=['POST'])
-@cross_origin(supports_credentials=True)
 def login():
 
     if not request.json:
