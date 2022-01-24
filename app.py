@@ -26,7 +26,10 @@ app.config["JWT_COOKIE_SECURE"] = False # In production, this should always be s
 app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=3)
 Swagger(app, template_file='conf/openapi.yaml')
  # Allow CORS
-CORS(app)
+CORS(app,
+    resources={r"*": {"origins": "http://localhost:8080"}},
+    expose_headers=["Content-Type", "X-CSRFToken"],
+    supports_credentials=True,)
 
 # register blueprints. ensure that all paths are versioned!
 
