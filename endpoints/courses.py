@@ -126,7 +126,7 @@ def  updatecourse(idcourse):
     course = request.get_json()
     # course["updatedAt"] = time.strftime('%d/%m/%y', time.localtime()) I will send it so no need
     try:
-        res = users.update_one({'_id': ObjectId(idcourse)}, {'$set': course})
+        res = courses.update_one({'_id': ObjectId(idcourse)}, {'$set': course})
     except Exception:
         abort(500)
     
