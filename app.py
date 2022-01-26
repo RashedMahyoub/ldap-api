@@ -28,7 +28,7 @@ Swagger(app, template_file='conf/openapi.yaml')
 
  # Allow CORS
 CORS(app,
-    resources={r"*": {"origins": "http://localhost:8080"}},
+    resources={r"*": {"origins": "http://localhost:3000",}},
     expose_headers=["Content-Type", "X-CSRFToken"],
     supports_credentials=True,)
 

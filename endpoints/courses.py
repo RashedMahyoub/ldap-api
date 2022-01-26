@@ -1,4 +1,5 @@
-
+from asyncio.windows_events import NULL
+from queue import Empty
 from flask import request, make_response, abort
 from flask import Flask, Blueprint, jsonify
 from flask_pymongo import PyMongo
@@ -49,9 +50,9 @@ def not_found(error=None):
     resp.status_code = 404
     return resp
 
-@coursesapi.route('/courses/add/<instructorID>', methods=['POST'])
-@jwt_required()
-def addcourse(instructorID):
+@coursesapi.route('/courses/add/', methods=['POST'])
+#@jwt_required()
+def addcourse():
 
     if not request.json:
         abort(400)
@@ -67,8 +68,8 @@ def addcourse(instructorID):
         abort(400)
     
     course = request.get_json()
-    courses['state'] = "waiting"
-    course['createdAt'] = time.strftime('%d/%m/%y', time.localtime())   
+    course['state'] = "waiting"
+    #course['createdAt'] = time.strftime('%d/%m/%y', time.localtime())   
     try:
         c = courses.insert_one(course)
     except Exception:
@@ -134,6 +135,7 @@ def  updatecourse(idcourse):
 
 # Update state course  
 @coursesapi.route('/courses/state/<courseID>/<state>', methods=['PUT'])
+@jwt_required()
 def projectUpdateState(courseID, state):
 
     course = courses.find_one({'_id': ObjectId(courseID)}) 
@@ -162,8 +164,29 @@ def coursesByID(id):
     resp.status_code = 200
     return resp
 
+#Get all instructor courses 
+@coursesapi.route('/courses/instructor/<id>', methods=['GET'])
+def coursesInstructor(id):
+   
+    if ObjectId.is_valid(id) == False:
+        return id_inalid(id)
+    user = users.find_one({'_id': ObjectId(id)})
+    if user == None:
+        resp = jsonify({"message": "Instructor does not exist in database"})
+        resp.status_code = 404
+        return resp   
+    
+    output = []
+    for d in courses.find({'instructorID': id}):
+        output.append(json.loads(json_util.dumps(d)))
+
+    resp = jsonify(output)
+    resp.status_code = 200
+    return resp
+
 # delete course as a physical delte from collection courses
 @coursesapi.route('/courses/delete/<idcourse>', methods=['PUT'])
+@jwt_required()
 def deleteOne(idcourse): 
     
     if ObjectId.is_valid(idcourse) == False:
@@ -172,7 +195,7 @@ def deleteOne(idcourse):
     user = courses.find_one({'_id': ObjectId(idcourse)})
     # course doesn"t exist in dataBase
     if user == None:
-        resp = jsonify({"message": "course not exist in database"})
+        resp = jsonify({"message": "course does not exist in database"})
         resp.status_code = 404
         return resp
     # Physical delete from collection courses 
@@ -192,35 +215,55 @@ def deleteOne(idcourse):
     return success()
 
 #get All courses with filter: categories, price,  instructor name and Course title 
-# using post methdd
-@coursesapi.route('/courses/filter/', methods=['POST'])
+# using GET methdd
+@coursesapi.route('/courses/filter/', methods=['GET'])
+#@jwt_required()
 def coursesFilter():
 
-    if not request.json:
-        abort(400)
-
-    data = request.json
+    price = request.args.get('price')
+    search = request.args.get('search')
+    categories = request.args.getlist('categories')
+    page = request.args.get("page")
+    orders = request.args.get('order')
+    limitcollection = request.args.get('limit')
+    
     filter = {}
-    orderby ={}
-    # serach all instructors ID match the name of instructor
-    if 'instructor' in data:
-        idInscturor = []
-        for d in users.find({'name': {'$regex' : data['instructor'], '$options' : 'i' }}, {"Isinstructor": True}):
-            idInscturor.append(d)         
-        filter['instructor'] = {"$in": idInscturor}
-    
-    if 'coursesname' in data:
-        filter['title']  = {'$regex' : data['coursesname'], '$options' : 'i' }
-    if 'categories' in data:
-       filter['category'] = {"$in": data['categories']}
-    
-    filter['state'] = "available"
+    order = {'createdAt', -1}
+    # order By 
+      #highest: order from hights prices to lowest. 
+    if orders == 'highest':
+       order = {'price': -1}
+    if orders == 'lowest':
+        order = {'price': 1}
+    if orders == "recent":
+       order = {'createdAt', -1}
         
-    output = []
-    for d in courses.find({ "$query": filter}): 
-        output.append(json.loads(json_util.dumps(d)))
+    idInscturor = []
+    for d in users.find({'name': {'$regex' : search, '$options' : 'i' }}, {"Isinstructor": True,'_id':1}):
+        idInscturor.append(str(d['_id']))         
     
+    filter['instructorID'] = {"$in": idInscturor}
+    #Must be an or 
+    #filter['title']  = {'$regex' : search, '$options' : 'i' }
+    if len(categories) >0 :
+       filter['category'] = {"$in": categories}
+    
+   # filter['state'] = "available"
+    
+    # Price filter
+    
+    if price == "free":
+       filter['price'] =  {'$eq': 0}
+    if price =="paid":
+        filter['price'] =  {'$gt': 0}
+
+    #
+    output = []
+    for d in courses.find({"$query": filter, "$orderby": order}).limit(int(limitcollection)).skip (int(page)): 
+        output.append(json.loads(json_util.dumps(d)))
+   
     resp = jsonify(output)
+    #resp = jsonify(json.loads(json_util.dumps(filter)))
     resp.status_code = 200
     return resp
 
@@ -244,8 +287,7 @@ def allCategories():
 def addcategories():
 
     if not request.json:
-        abort(400)
-       
+        abort(400)      
     
     if 'title' in request.json and isinstance(request.json['title'], str) == False:
         abort(400)
@@ -265,4 +307,3 @@ def addcategories():
 
 if __name__ == '__main__':
     app.run(debug=True)
-
