@@ -154,7 +154,7 @@ def projectUpdateState(courseID, state):
     return success()
 
 #Search course by Id 
-@coursesapi.route('/courses/get/<id>', methods=['GET'])
+@coursesapi.route('/courses/getID/<id>', methods=['GET'])
 def coursesByID(id):
    
     if ObjectId.is_valid(id) == False:
