@@ -105,7 +105,7 @@ def coursesByCategory(category):
 
 #Update course
 @coursesapi.route('/courses/update/<idcourse>', methods=['POST'])
-@jwt_required()
+# @jwt_required()
 def  updatecourse(idcourse):
     
     if not request.json:
@@ -126,11 +126,11 @@ def  updatecourse(idcourse):
     course = request.get_json()
     # course["updatedAt"] = time.strftime('%d/%m/%y', time.localtime()) I will send it so no need
     try:
-        res = users.update_one({'_id': ObjectId(idcourse)}, {'$set': course})
+        res = courses.update_one({'_id': ObjectId(idcourse)}, {'$set': course})
     except Exception:
         abort(500)
     
-    return jsonify(json.loads(json_util.dumps(users.find_one({'_id': ObjectId(idcourse)}))))
+    return jsonify(json.loads(json_util.dumps(courses.find_one({'_id': ObjectId(idcourse)}))))
 
 
 # Update state course  
@@ -154,7 +154,7 @@ def projectUpdateState(courseID, state):
     return success()
 
 #Search course by Id 
-@coursesapi.route('/courses/get/<id>', methods=['GET'])
+@coursesapi.route('/courses/getID/<id>', methods=['GET'])
 def coursesByID(id):
    
     if ObjectId.is_valid(id) == False:
