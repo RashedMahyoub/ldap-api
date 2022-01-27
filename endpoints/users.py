@@ -13,6 +13,8 @@ from flask.json import jsonify
 from bson.objectid import ObjectId
 from bson import objectid, json_util
 import time
+from datetime import timezone
+
 from datetime import timedelta
 from flask_jwt_extended import create_access_token
 from flask_jwt_extended import get_jwt_identity
@@ -294,7 +296,6 @@ def getUserByID(iduser):
     resp.status_code = 200
     return resp
 
-
 # add the  favoris course  "idfavoris" to the favorites list of the user  
 @usersapi.route('/users/favoris/<iduserr>/<idcourse>/', methods=['PUT'])
 @jwt_required()
@@ -491,7 +492,7 @@ def getAllOrders(iduser):
 
 # log In 
 # https://flask-jwt-extended.readthedocs.io/en/stable/refreshing_tokens/
-
+# send crrf token https://flask-jwt-extended.readthedocs.io/en/3.0.0_release/tokens_in_cookies/
 @usersapi.route('/users/logIn/', methods=['POST'])
 def login():
 
@@ -525,6 +526,7 @@ def login():
 
 
 #Logout
+# For the second solution, https://codeburst.io/jwt-authorization-in-flask-c63c1acf4eeb
 @usersapi.route('/users/logOut/')
 def logout():
     

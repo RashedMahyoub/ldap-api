@@ -124,7 +124,7 @@ def  updatecourse(idcourse):
         abort(400)
 
     course = request.get_json()
-    # course["updatedAt"] = time.strftime('%d/%m/%y', time.localtime()) I will send it so no need
+   # course["UpdatedAt"] = time.strftime('%d/%m/%y', time.localtime())
     try:
         res = courses.update_one({'_id': ObjectId(idcourse)}, {'$set': course})
     except Exception:
@@ -132,11 +132,73 @@ def  updatecourse(idcourse):
     
     return jsonify(json.loads(json_util.dumps(courses.find_one({'_id': ObjectId(idcourse)}))))
 
+#**********************************************
+# Chapter of a course
+#**************************
 
+#Update chapter
+@coursesapi.route('/courses/chapters/update/<courseID>/<numberChapter>', methods=['PUT'])
+#@jwt_required()
+def updateChapterCpurse(courseID, numberChapter):
+    
+    if ObjectId.is_valid(courseID) == False:
+        return id_inalid(courseID)
+    course = courses.find_one({'_id': ObjectId(courseID)})
+    
+    if not request.json:
+        abort(400)
+        
+    if course ==None:
+        resp = jsonify({"message": "course does not exist in database"})
+        resp.status_code = 404
+        return resp 
+    data = request.get_json() 
+    try:
+        res= courses.update_one({'_id': ObjectId(courseID), "chapters.id": str(numberChapter)}, {'$set':{"chapter" : data}})
+
+    except Exception:
+        message = {
+               'status': 500,
+               'message': 'update problem'
+            } 
+    proj = courses.find_one({'_id': ObjectId(courseID)})
+    resp = jsonify(json.loads(json_util.dumps(proj)))
+    resp.status_code= 200
+    return resp
+
+# Remove chapter
+@coursesapi.route('/courses/chapters/remove/<courseID>/<numberChapter>', methods=['PUT'])
+#@jwt_required()
+def removeChapterCpurse(courseID, numberChapter):
+    
+    if ObjectId.is_valid(courseID) == False:
+        return id_inalid(courseID)
+    course = courses.find_one({'_id': ObjectId(courseID)})
+    
+    if not request.json:
+        abort(400)
+        
+    if course ==None:
+        resp = jsonify({"message": "course does not exist in database"})
+        resp.status_code = 404
+        return resp 
+    
+    try:
+        res = courses.update_one({'_id': ObjectId(courseID)}, {'$pull': {"chapters" : {"id": str(numberChapter)}}})
+    except Exception:
+        message = {
+               'status': 500,
+               'message': 'update problem'
+            } 
+    proj = courses.find_one({'_id': ObjectId(courseID)})
+    resp = jsonify(json.loads(json_util.dumps(proj)))
+    resp.status_code= 200
+    return resp   
+    
 # Update state course  
 @coursesapi.route('/courses/state/<courseID>/<state>', methods=['PUT'])
 @jwt_required()
-def projectUpdateState(courseID, state):
+def coursetUpdateState(courseID, state):
 
     course = courses.find_one({'_id': ObjectId(courseID)}) 
     if course == None:
@@ -220,49 +282,77 @@ def deleteOne(idcourse):
 #@jwt_required()
 def coursesFilter():
 
-    price = request.args.get('price')
+    priceget = request.args.get('price')
     search = request.args.get('search')
     categories = request.args.getlist('categories')
     page = request.args.get("page")
     orders = request.args.get('order')
     limitcollection = request.args.get('limit')
-    
-    filter = {}
-    order = {'createdAt', -1}
+    startIndex = (int(page) - 1) * int(limitcollection)
+
+        
+    order = ['createdAt', -1]
     # order By 
       #highest: order from hights prices to lowest. 
     if orders == 'highest':
-       order = {'price': -1}
+       order = ['price', -1]
     if orders == 'lowest':
-        order = {'price': 1}
+        order = ['price', 1]
     if orders == "recent":
-       order = {'createdAt', -1}
-        
-    idInscturor = []
-    for d in users.find({'name': {'$regex' : search, '$options' : 'i' }}, {"Isinstructor": True,'_id':1}):
-        idInscturor.append(str(d['_id']))         
-    
-    filter['instructorID'] = {"$in": idInscturor}
-    #Must be an or 
-    #filter['title']  = {'$regex' : search, '$options' : 'i' }
-    if len(categories) >0 :
-       filter['category'] = {"$in": categories}
-    
-   # filter['state'] = "available"
-    
-    # Price filter
-    
-    if price == "free":
-       filter['price'] =  {'$eq': 0}
-    if price =="paid":
-        filter['price'] =  {'$gt': 0}
+       order = ['createdAt', -1]
 
-    #
+    #search instructor    
+    idInscturor = []
+
+    titleFilter = [];
+
+    if search:
+        for d in users.find({'name': {'$regex' : search, '$options' : 'i' }, "Instructor": {"$exists": True}}, {'_id': 1}):
+            idInscturor.append(str(d['_id']))         
+    
+    #search course title    
+    #Must be an or 
+    title = {'title': {'$regex' : search, '$options' : 'i' }} if search else None  
+      
+    # Price filter
+    price = None;
+    if priceget == "free":
+        price =  {'price': {'$eq': 0}}
+    if priceget =="paid":
+        price =  {'price': {'$gt': 0}}
+    if priceget =="all":
+        price =  None;
+
+    filter =[{'state': 'available'}]
+
+    if title:
+        titleFilter.append(title);
+
+    if len(idInscturor) > 0:
+        inst = {'instructorID' :{"$in": idInscturor}}
+        titleFilter.append(inst)
+
+    if price:
+        filter.append(price);
+
+    if len(categories) > 0 :
+        category = {'category': {"$in": categories}}
+        filter.append(category)
+            
+    fullfilter = {};
+    if titleFilter:
+        fullfilter = { '$and': filter, '$or': titleFilter }
+    else:
+        fullfilter = { '$and': filter }
+
+    # filter courses get document counts
     output = []
-    for d in courses.find({"$query": filter, "$orderby": order}).limit(int(limitcollection)).skip (int(page)): 
+    results = courses.find(fullfilter).sort(order[0], order[1]).limit(int(limitcollection)).skip(startIndex);
+    results_count = courses.count_documents(fullfilter)
+    for d in results: 
         output.append(json.loads(json_util.dumps(d)))
    
-    resp = jsonify(output)
+    resp = jsonify({ 'courses': output, 'count': results_count})
     #resp = jsonify(json.loads(json_util.dumps(filter)))
     resp.status_code = 200
     return resp
@@ -281,7 +371,6 @@ def allCategories():
     resp = jsonify(output)
     resp.status_code = 200
     return resp
-
 
 @coursesapi.route('/categories/add', methods=['POST'])
 def addcategories():
@@ -305,5 +394,153 @@ def addcategories():
     resp.status_code= 200
     return resp
 
+#**********************************************
+# Reports
+#**************************
+ 
+## Send Object(iduser, raison)
+@coursesapi.route('/courses/reports/add/<idcourse>', methods=['POST'])
+def addreportCourse(idcourse):
+      
+    data = request.get_json()
+    if ObjectId.is_valid(idcourse) == False:
+        return not_found()
+    
+    if not request.json:
+        abort(400)
+    if 'raison' not in request.json:
+        abort(400)
+   
+    user = users.find_one({'_id': ObjectId(str(data['iduser']))})
+    
+    course = courses.find_one({'_id': ObjectId(idcourse)}) 
+    # user of provier not exist in dataBase
+    if user == None or course== None:
+        resp = jsonify({"message": "user Or course not exist in database"})
+        resp.status_code = 404
+        return resp
+    # Exist: update collection customers
+    data['date'] = time.strftime('%d/%m/%y', time.localtime())
+    try:
+        courses.update_one({'_id': ObjectId(idcourse)}, {'$push': {"reports": data}})
+    except Exception:
+        message = {
+            'status': 500,
+            'message': 'update problem'
+        }
+        resp = jsonify(message)
+        return resp
+
+    return success()
+
+#get All reports 
+@coursesapi.route('/courses/reports/', methods=['GET'])
+def allReports():
+    
+    output = []
+    for d in courses.find({}, {'reports': 1}):
+        if 'reports' in d:
+            output.append(json.loads(json_util.dumps(d)))
+
+    resp = jsonify(output)
+    resp.status_code = 200
+    return resp
+
+#get All reports of a given course
+@coursesapi.route('/courses/reports/<id>', methods=['GET'])
+def allReportsOfcourse(id):
+    
+    if ObjectId.is_valid(id) == False:
+        abort(400)
+    output = []
+    for d in courses.find({'_id': ObjectId(id)}, {'reports': 1}):
+        if 'reports' in d:
+            output.append(json.loads(json_util.dumps(d)))
+
+    resp = jsonify(output)
+    resp.status_code = 200
+    return resp
+
+#**********************************************
+# Comments
+#**************************
+ 
+## Send Object(user, comment)
+@coursesapi.route('/courses/comments/add/<idcourse>', methods=['POST'])
+def addcommentCourse(idcourse):
+      
+    data = request.get_json()
+    if ObjectId.is_valid(idcourse) == False:
+        return not_found()
+    
+    if not request.json:
+        abort(400)
+    if 'comment' not in request.json :
+        abort(400)
+    if 'user' not in request.json :
+        abort(400)
+   
+    user = users.find_one({'_id': ObjectId(str(data['user']))})
+    
+    course = courses.find_one({'_id': ObjectId(idcourse)}) 
+    # user of provier not exist in dataBase
+    if user == None or course== None:
+        resp = jsonify({"message": "user Or course not exist in database"})
+        resp.status_code = 404
+        return resp
+    # Exist: update collection customers
+    data['date'] = time.strftime('%d/%m/%y', time.localtime())
+    try:
+        courses.update_one({'_id': ObjectId(idcourse)}, {'$push': {"comments": data}})
+    except Exception:
+        message = {
+            'status': 500,
+            'message': 'update problem'
+        }
+        resp = jsonify(message)
+        return resp
+
+    return success()
+
+#get All comments of a given course
+@coursesapi.route('/courses/comments/<id>', methods=['GET'])
+def allCommentsOfcourse(id):
+    
+    if ObjectId.is_valid(id) == False:
+        abort(400)
+    output = []
+    for d in courses.find({'_id': ObjectId(id)}, {'comments': 1}):
+        if 'comments' in d:
+            output.append(json.loads(json_util.dumps(d)))
+
+    resp = jsonify(output)
+    resp.status_code = 200
+    return resp
+
+# remove a user comment for a given course 
+@coursesapi.route('/courses/comments/delete/<idcourse>/<iduser>', methods=['PUT'])
+#@jwt_required()
+def userRemoveComment(idcourse, iduser):
+
+    if ObjectId.is_valid(idcourse) == False:
+        return id_inalid(idcourse)
+    if ObjectId.is_valid(iduser) == False:
+        return id_inalid(iduser)
+
+    user = users.find_one({'_id': ObjectId(iduser)})
+    cour = courses.find_one({'_id': ObjectId(idcourse)})
+    # user of provier not exist in dataBase
+    if user == None or cour == None:
+        resp = jsonify({"message": "user or course not exist"})
+        resp.status_code = 404
+        return resp
+    
+    # Exist: remove the favoris idcourse
+    try:
+        courses.update_one({'_id': ObjectId(idcourse)}, {'$pull': {"comments" : {"user": str(iduser)}}})
+    except Exception:
+       abort(500)
+
+    return success()
 if __name__ == '__main__':
     app.run(debug=True)
