@@ -134,7 +134,9 @@ def confirm_email(token):
     except Exception:
         abort(500)
     
-    return jsonify(json.loads(json_util.dumps(users.find_one({'email': email}))))
+    resp = jsonify({"message": "Thank you, your account has been successfully activated"})
+    resp.status_code = 200
+    return resp
 
 # Upgrade user to Instructor
 @usersapi.route('/users/beInstructor/<userId>', methods=['PUT'])
