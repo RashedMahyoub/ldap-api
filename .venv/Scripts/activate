@@ -37,7 +37,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="D:\rashed\Maksabi\E-learning platform\e-learning-api\.venv"
+VIRTUAL_ENV="D:\rashed\Maxabi\E-learning platform\e-learning-api\.venv"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"

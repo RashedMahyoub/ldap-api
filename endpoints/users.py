@@ -33,8 +33,8 @@ app.config['MAIL_SERVER'] = 'smtp.gmail.com'
 app.config['MAIL_PORT'] = 465
 app.config['MAIL_USE_TLS'] = False
 app.config['MAIL_USE_SSL'] = True
-app.config['MAIL_USERNAME'] = 'zakibrahmi@gmail.com'
-app.config['MAIL_PASSWORD'] = 'sabrina!!__))123456789'
+app.config['MAIL_USERNAME'] = 'leetcourse@gmail.com'
+app.config['MAIL_PASSWORD'] = 'otryngbcaymdzosy'
 app.config['SECRET_KEY'] ='01428!4f2af45d3a4e161a7dd2d17fdae47f'
 app.config['SECURITY_PASSWORD_SALT'] ='01428!4f2a4e161a7dd2d17fg45!e47f'
 mail = Mail(app)
@@ -138,7 +138,7 @@ def confirm_email(token):
 
 # Upgrade user to Instructor
 @usersapi.route('/users/beInstructor/<userId>', methods=['PUT'])
-@jwt_required()
+# @jwt_required()
 def upgradeUser(userId):
 
     if not request.json:
@@ -162,7 +162,7 @@ def upgradeUser(userId):
 
 # update  user information
 @usersapi.route('/users/<Id>', methods=['PUT'])
-@jwt_required()
+# @jwt_required()
 def updateUser(Id):
 
     if not request.json:
@@ -198,7 +198,7 @@ def updateUser(Id):
 
 # update user email/password
 @usersapi.route('/users/emailPassword/<Id>', methods=['PUT'])
-@jwt_required()
+# @jwt_required()
 def updateEmailPasswordUser(Id):
 
     if not request.json:
