@@ -197,7 +197,7 @@ def removeChapterCpurse(courseID, numberChapter):
     
 # Update state course  
 @coursesapi.route('/courses/state/<courseID>/<state>', methods=['PUT'])
-@jwt_required()
+# @jwt_required()
 def coursetUpdateState(courseID, state):
 
     course = courses.find_one({'_id': ObjectId(courseID)}) 
@@ -248,7 +248,7 @@ def coursesInstructor(id):
 
 # delete course as a physical delte from collection courses
 @coursesapi.route('/courses/delete/<idcourse>', methods=['PUT'])
-@jwt_required()
+# @jwt_required()
 def deleteOne(idcourse): 
     
     if ObjectId.is_valid(idcourse) == False:
@@ -516,19 +516,43 @@ def allReportsOfcourse(id):
     resp.status_code = 200
     return resp
 
-#get All reports of a given comment
-@coursesapi.route('/comments/reports/comments/<idcomment>', methods=['GET'])
-def allReportsOfComment(idcourse):
+#get All reports of a comments and replies from a course
+@coursesapi.route('/comments/reports/repliescomments/<idcourse>', methods=['GET'])
+def allReportsOfCommentReplies(idcourse):
     
     output = []
-    for d in comments.find({'_id': ObjectId(id)}, {'reports': 1}):
+    for d in comments.find({'course': str(idcourse)}).sort([('createdAt', -1)]):
+        if 'reports' in d:
+            for r in d['reports']:
+                r['type'] = 'comment'
+                r['commentId'] = d['_id']
+                output.append(json.loads(json_util.dumps(r)))
+        if 'replies' in d:
+            for m in d['replies']:
+                if 'reports' in m:
+                    for r in m['reports']:
+                        r['type'] = 'reply'
+                        r['commentId'] = d['_id']
+                        r['replyId'] = m['IdReply']
+                        output.append(json.loads(json_util.dumps(r)))
+
+
+    resp = jsonify(output)
+    resp.status_code = 200
+    return resp
+
+#get All reports of a given comment
+@coursesapi.route('/comments/reports/comments/<idcomment>', methods=['GET'])
+def allReportsOfComment(idcomment):
+    
+    output = []
+    for d in comments.find({'_id': ObjectId(idcomment)}, {'reports': 1}):
         if 'reports' in d:
             output.append(json.loads(json_util.dumps(d)))
 
     resp = jsonify(output)
     resp.status_code = 200
     return resp
-
 
 #**********************************************
 # Comments
@@ -578,10 +602,34 @@ def allCommentsOfcourse(id):
     if ObjectId.is_valid(id) == False:
         abort(400)
     output = []
-    for d in comments.find({'course': str(id)}):
+    for d in comments.find({'course': str(id)}).sort([('createdAt', -1)]):
         output.append(json.loads(json_util.dumps(d)))
 
     resp = jsonify(output)
+    resp.status_code = 200
+    return resp
+
+#get comment by Id
+@coursesapi.route('/courses/comments/get/<id>', methods=['GET'])
+def commentByID(id):
+    
+    if ObjectId.is_valid(id) == False:
+        abort(400)
+    
+    u = comments.find_one({'_id': ObjectId(id)})
+    resp = jsonify(json.loads(json_util.dumps(u)))
+    resp.status_code = 200
+    return resp
+
+#get reply by Id
+@coursesapi.route('/courses/replies/get/<id>', methods=['GET'])
+def replyById(id):
+    
+    if ObjectId.is_valid(id) == False:
+        abort(400)
+    
+    c = comments.find({"replies":{"$elemMatch": {"IdReply": ObjectId(id)}}},  {"_id": 0, "replies": {"$elemMatch": {"IdReply": ObjectId(id)}}})
+    resp = jsonify(json.loads(json_util.dumps(c)))
     resp.status_code = 200
     return resp
 
@@ -671,6 +719,33 @@ def deleteReplyForcomment(idcomment,idReply):
 
     return success()
 
+#**********************************************
+# Rating
+#**************************
+# Update course rating
+@coursesapi.route('/courses/update/rating/<courseid>', methods=['PUT'])
+# @jwt_required()
+def coursetUpdateRate(courseid):
+
+    data = request.get_json()
+
+    if not request.json:
+        abort(400)
+
+    course = courses.find_one({'_id': ObjectId(courseid)}) 
+    if course == None:
+      return not_found()
+    try:
+        course = courses.update_one({'_id': ObjectId(courseid)}, {'$set': {'rating': data }})
+    except Exception:
+        message = {
+               'status': 500,
+               'message': 'update problem'
+             }
+        resp = jsonify(message)
+        return resp
+    
+    return success()
 
 #**********************************************
 # Notifications
@@ -719,7 +794,7 @@ def allNotificationsOfcourse(id):
     output = []
     for d in courses.find({'_id': ObjectId(id)}, {'notifications': 1}):
         if 'notifications' in d:
-            output.append(json.loads(json_util.dumps(d)))
+            output = json.loads(json_util.dumps(d["notifications"]))
 
     resp = jsonify(output)
     resp.status_code = 200
@@ -770,6 +845,125 @@ def deleteAllNotificationOfCourses(idcourse):
     # Exist: update collection course
     try:
         courses.update_one({'_id': ObjectId(idcourse)}, {'$set': {"notifications": []}})
+    except Exception:
+        message = {
+            'status': 500,
+            'message': 'delete problem'
+        }
+        resp = jsonify(message)
+        return resp
+    return success()
+
+
+#**********************************************
+# Recents & Course Progress
+#**************************
+# add course to recents
+@coursesapi.route('/courses/recents/add/<iduser>/<idcourse>', methods=['PUT'])
+#@jwt_required()
+def addCourseToRecents(iduser, idcourse):
+
+    if ObjectId.is_valid(idcourse) == False:
+        return id_inalid(idcourse)
+
+    if ObjectId.is_valid(iduser) == False:
+        return id_inalid(iduser)
+
+    crs = courses.find_one({'_id': ObjectId(idcourse)})
+    user = users.find_one({'_id': ObjectId(iduser)})
+
+    # user of provier not exist in dataBase
+    if crs == None:
+        resp = jsonify({"message": "course not exist"})
+        resp.status_code = 404
+        return resp
+
+    if user == None:
+        return user_notfound(iduser)
+
+    # Exist: update collection course
+    try:
+        users.update_one({'_id': ObjectId(iduser)}, {'$addToSet': {"recents": idcourse}})
+    except Exception:
+        message = {
+            'status': 500,
+            'message': 'add problem'
+        }
+        resp = jsonify(message)
+        return resp
+
+    updatedUser = users.find_one({'_id': ObjectId(iduser)})
+    resp = jsonify(json.loads(json_util.dumps(updatedUser)))
+    resp.status_code= 200
+    return resp
+
+
+# add course to recents
+@coursesapi.route('/courses/recents/remove/<iduser>/<idcourse>', methods=['PUT'])
+#@jwt_required()
+def removeCourseFromRecents(iduser, idcourse):
+
+    if ObjectId.is_valid(idcourse) == False:
+        return id_inalid(idcourse)
+
+    if ObjectId.is_valid(iduser) == False:
+        return id_inalid(iduser)
+
+    crs = courses.find_one({'_id': ObjectId(idcourse)})
+    user = users.find_one({'_id': ObjectId(iduser)})
+
+    # user of provier not exist in dataBase
+    if crs == None:
+        resp = jsonify({"message": "course not exist"})
+        resp.status_code = 404
+        return resp
+
+    if user == None:
+        return user_notfound(iduser)
+
+    # Exist: update collection course
+    try:
+        users.update_one({'_id': ObjectId(iduser)}, {'$pull': {"recents": idcourse}})
+    except Exception:
+        message = {
+            'status': 500,
+            'message': 'delete problem'
+        }
+        resp = jsonify(message)
+        return resp
+
+    updatedUser = users.find_one({'_id': ObjectId(iduser)})
+    resp = jsonify(json.loads(json_util.dumps(updatedUser)))
+    resp.status_code= 200
+    return resp
+
+
+# add course to recents
+@coursesapi.route('/courses/progress/<iduser>/<idcourse>', methods=['PUT'])
+#@jwt_required()
+def updateCourseProgress(iduser, idcourse):
+
+    if ObjectId.is_valid(idcourse) == False:
+        return id_inalid(idcourse)
+
+    if ObjectId.is_valid(iduser) == False:
+        return id_inalid(iduser)
+
+    crs = courses.find_one({'_id': ObjectId(idcourse)})
+    user = users.find_one({'_id': ObjectId(iduser)})
+
+    # user of provier not exist in dataBase
+    if crs == None:
+        resp = jsonify({"message": "course not exist"})
+        resp.status_code = 404
+        return resp
+
+    if user == None:
+        return user_notfound(iduser)
+
+    # Exist: update collection course
+    try:
+        users.update_one({'_id': ObjectId(iduser)}, {'$set': {"recents": idcourse}})
     except Exception:
         message = {
             'status': 500,

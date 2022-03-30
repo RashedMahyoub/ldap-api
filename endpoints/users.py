@@ -300,7 +300,7 @@ def getUserByID(iduser):
 
 # add the  favoris course  "idfavoris" to the favorites list of the user  
 @usersapi.route('/users/favoris/<iduserr>/<idcourse>/', methods=['PUT'])
-@jwt_required()
+# @jwt_required()
 def userAddFavoris(iduserr, idcourse):
 
     if ObjectId.is_valid(iduserr) == False:
@@ -317,19 +317,23 @@ def userAddFavoris(iduserr, idcourse):
         return resp
     # Exist: update collection user
     try:
-        users.update_one({'_id': ObjectId(iduserr)}, {'$addToSet': {"favoris": ObjectId(idcourse)}})
+        users.update_one({'_id': ObjectId(iduserr)}, {'$addToSet': {"favcourses": idcourse}})
     except Exception:
         return jsonify({"message": "updte failed "})
-    return success()
+
+    updatedUser = users.find_one({'_id': ObjectId(iduserr)})
+    resp = jsonify(json.loads(json_util.dumps(updatedUser)))
+    resp.status_code= 200
+    return resp
 
 # get All user favorites
 @usersapi.route('/users/favoris/<iduser>/', methods=['GET'])
-@jwt_required()
+# @jwt_required()
 def getFavoris(iduser):
 
     if ObjectId.is_valid(iduser) == False:
         return id_inalid()
-    favoris = users.find_one({'_id': ObjectId(iduser)}, {"favoris": 1})
+    favoris = users.find_one({'_id': ObjectId(iduser)}, {"favcourses": 1})
     # user of provier not exist in dataBase
     if favoris == None:
         resp = jsonify({"message": "user not exist in database"})
@@ -342,7 +346,7 @@ def getFavoris(iduser):
 
 # remove idfavoris  from  favorites list
 @usersapi.route('/users/favoris/delete/<iduser>/<idfavoris>', methods=['PUT'])
-@jwt_required()
+# @jwt_required()
 def userRemoveFavoris(iduser, idfavoris):
 
     if ObjectId.is_valid(iduser) == False:
@@ -358,17 +362,20 @@ def userRemoveFavoris(iduser, idfavoris):
         resp.status_code = 404
         return resp
     
-    # Exist: remove the favoris idfavoris
+    # Exist: remove the favcourses idfavoris
     try:
-        users.update_one({'_id': ObjectId(iduser)}, { '$pull': {"favoris": ObjectId(idfavoris)}})
+        users.update_one({'_id': ObjectId(iduser)}, { '$pull': {"favcourses": idfavoris}})
     except Exception:
        abort(500)
 
-    return success()
+    updatedUser = users.find_one({'_id': ObjectId(iduser)})
+    resp = jsonify(json.loads(json_util.dumps(updatedUser)))
+    resp.status_code= 200
+    return resp
 
 # add notification to the user "iduser"
 @usersapi.route('/users/notifications/add/<iduser>/', methods=['PUT'])
-@jwt_required()
+# @jwt_required()
 def userAddnotification(iduser):
 
     if ObjectId.is_valid(iduser) == False:
@@ -404,7 +411,7 @@ def userAddnotification(iduser):
 
 # get All notifications of the user iduser
 @usersapi.route('/users/notifications/<iduser>/', methods=['GET'])
-@jwt_required()
+# @jwt_required()
 def getNotifications(iduser):
   
     if ObjectId.is_valid(iduser) == False:
@@ -426,7 +433,7 @@ def getNotifications(iduser):
 
 # delete all notifications
 @usersapi.route('/users/notifications/deleteAll/<iduser>/', methods=['put'])
-@jwt_required()
+# @jwt_required()
 def deleteAllNotifications(iduser):
 
     if ObjectId.is_valid(iduser) == False:
@@ -447,7 +454,7 @@ def deleteAllNotifications(iduser):
 
 # Delete the notification idNotification
 @usersapi.route('/users/notifications/deleteOne/<idUser>/<idNotification>/', methods=['PUT'])
-@jwt_required()
+# @jwt_required()
 def deleteOneNotification(idUser, idNotification):
 
     if ObjectId.is_valid(idUser) == False:
@@ -472,7 +479,7 @@ def deleteOneNotification(idUser, idNotification):
 #####################################################
 # get All cours where user is subscribed 
 @usersapi.route('/users/orders/<iduser>/', methods=['GET'])
-@jwt_required()
+# @jwt_required()
 def getAllOrders(iduser):
   
     if ObjectId.is_valid(iduser) == False:

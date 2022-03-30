@@ -28,6 +28,7 @@ mongo = PyMongo(app)
 users = mongo.db.users
 courses = mongo.db.courses
 categories = mongo.db.categories
+comments = mongo.db.comments
 
 
 
