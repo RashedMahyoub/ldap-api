@@ -288,6 +288,32 @@ def subscriptionCourse(iduser, idcourse):
         return jsonify({"message": "users updte failed "})    
     
     return success()
+
+# update user progress on a course
+@usersapi.route('/users/updateprogress/<iduser>/<idcourse>/', methods=['PUT'])
+# @jwt_required()
+def updateProgressCourse(iduser, idcourse):
+    
+    if ObjectId.is_valid(iduser) == False:
+        return id_inalid(iduser)
+    if ObjectId.is_valid(idcourse) == False:
+        return id_inalid(idcourse)
+
+    user = users.find_one({'_id': ObjectId(iduser)})
+    course = courses.find_one({'_id': ObjectId(idcourse)})
+    # user of provier not exist in dataBase
+    if user == None or course == None:
+        resp = jsonify({"message": "user or course doesn't exist"})
+        resp.status_code = 404
+        return resp
+   
+    # Update course progress
+    data = request.get_json()
+    try:
+        users.update_one({'_id': ObjectId(iduser), "courses.id":idcourse}, {'$set':{"courses.$.progress": data}})
+    except Exception:
+        return jsonify({"message": "users updte failed "})    
+    return success()
     
 # get user by ID
 @usersapi.route('/users/get/<iduser>/', methods=['GET'])
